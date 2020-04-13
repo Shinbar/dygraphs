@@ -423,12 +423,13 @@ DygraphInteraction.startTouch = function(event, g, context) {
     touches.push({
       pageX: t.pageX,
       pageY: t.pageY,
-      dataX: g.toDataXCoord(t.clientX-rect.left),
-      dataY: g.toDataYCoord(t.clientY-rect.top)
+      dataX: g.toDataXCoord(t.clientX - rect.left),
+      dataY: g.toDataYCoord(t.clientY - rect.top)
       // identifier: t.identifier
     });
   }
   context.initialTouches = touches;
+  context.pinchOutOfExtremes = false;
 
   if (touches.length == 1) {
     // This is possibly a touchOver, save the last touch to check
@@ -450,6 +451,15 @@ DygraphInteraction.startTouch = function(event, g, context) {
       dataY: 0.5 * (touches[0].dataY + touches[1].dataY)
     };
 
+    var xExtremes = g.xAxisExtremes();
+    var yExtremes = g.yAxisExtremes();
+    if (xExtremes[0] >= xExtremes[1] || this.isOutOfExtremes(context.pinchCenter.dataX, xExtremes)) {
+      context.pinchOutOfExtremes = true;
+    }
+    if (yExtremes.find(yEx => yEx[0] >= yEx[1] || this.isOutOfExtremes(pinchCenter.dataY, yEx))) {
+      context.pinchOutOfExtremes = true;
+    }
+
     // Make pinches in a 45-degree swath around either axis 1-dimensional zooms.
     var initialAngle = 180 / Math.PI * Math.atan2(
         context.initialPinchCenter.pageY - touches[0].pageY,
@@ -460,8 +470,10 @@ DygraphInteraction.startTouch = function(event, g, context) {
     if (initialAngle > 90) initialAngle = 90 - initialAngle;
 
     context.touchDirections = {
-      x: (initialAngle < (90 - 45/2)),
-      y: (initialAngle > 45/2)
+      // x: (initialAngle < (90 - 45/2)),
+      // y: (initialAngle > 45/2)
+      x: true,
+      y: true
     };
   }
 
@@ -515,19 +527,30 @@ DygraphInteraction.moveTouch = function(event, g, context) {
   var dataHeight = context.initialRange.y[0] - context.initialRange.y[1];
   swipe.dataX = (swipe.pageX / g.plotter_.area.w) * dataWidth;
   swipe.dataY = (swipe.pageY / g.plotter_.area.h) * dataHeight;
-  var xScale, yScale;
+
+  var xExtremes = g.xAxisExtremes();
+  var yExtremes = g.yAxisExtremes();
+  var xScale = 1.0, yScale = 1.0;
 
   // The residual bits are usually split into scale & rotate bits, but we split
   // them into x-scale and y-scale bits.
-  if (touches.length == 1) {
-    xScale = 1.0;
-    yScale = 1.0;
-  } else if (touches.length >= 2) {
+  if (touches.length >= 2 && !context.pinchOutOfExtremes) {
     var initHalfWidth = (initialTouches[1].pageX - c_init.pageX);
-    xScale = (touches[1].pageX - c_now.pageX) / initHalfWidth;
-
     var initHalfHeight = (initialTouches[1].pageY - c_init.pageY);
-    yScale = (touches[1].pageY - c_now.pageY) / initHalfHeight;
+    var minAllowed = 5, dampening;
+
+    if (Math.abs(initHalfWidth) > minAllowed) {
+      // sensitivity dampening: smaller pinches count form much less
+      dampening = 1 / (Math.abs(initHalfWidth) - minAllowed);
+      var nowHalfWidth = touches[1].pageX - c_now.pageX;
+      xScale = (nowHalfWidth + dampening) / (initHalfWidth + dampening);
+    }
+
+    if (Math.abs(initialTouches) > minAllowed) {
+      dampening = 1 / (Math.abs(initHalfHeight) - minAllowed);
+      var nowHalfHeight = touches[1].pageY - c_now.pageY;
+      yScale = (nowHalfHeight + dampening) / (initHalfHeight + dampening);
+    }
   }
 
   // Clip scaling to [1/8, 8] to prevent too much blowup.
@@ -536,10 +559,29 @@ DygraphInteraction.moveTouch = function(event, g, context) {
 
   var didZoom = false;
   if (context.touchDirections.x) {
+    var oldDateWindow = g.dateWindow_;
     g.dateWindow_ = [
       c_init.dataX - swipe.dataX / xScale + (context.initialRange.x[0] - c_init.dataX) / xScale,
       c_init.dataX - swipe.dataX / xScale + (context.initialRange.x[1] - c_init.dataX) / xScale
     ];
+    if (xExtremes[0] < xExtremes[1]) {
+      var pef = g.getNumericOption('panEdgeFraction') || 1/10;
+      var a = xExtremes[0] - (xExtremes[1] - xExtremes[0]) * pef;
+      var b = xExtremes[1] + (xExtremes[1] - xExtremes[0]) * pef;
+      if (g.dateWindow_[0] < a) {
+        g.dateWindow_[0] = a;
+        if (xScale == 1) { 
+          // if panning, do no scale window
+          g.dateWindow_[1] = oldDateWindow[1];
+        }
+      }
+      if (g.dateWindow_[1] > b) {
+        g.dateWindow_[1] = b;
+        if (xScale == 1) {
+          g.dateWindow_[0] = oldDateWindow[0];
+        }
+      }
+    }
     didZoom = true;
   }
 
@@ -550,10 +592,28 @@ DygraphInteraction.moveTouch = function(event, g, context) {
       if (logscale) {
         // TODO(danvk): implement
       } else {
+        var oldValueRange = axis.valueRange;
         axis.valueRange = [
           c_init.dataY - swipe.dataY / yScale + (context.initialRange.y[0] - c_init.dataY) / yScale,
           c_init.dataY - swipe.dataY / yScale + (context.initialRange.y[1] - c_init.dataY) / yScale
         ];
+        if (yExtremes[i][0] < yExtremes[i][1]) {
+          var pef = g.getNumericOption('panEdgeFraction') || 1/10;
+          var a = yExtremes[i][0] - (yExtremes[i][1] - yExtremes[i][0]) * pef;
+          var b = yExtremes[i][1] + (yExtremes[i][1] - yExtremes[i][0]) * pef;
+          if (axis.valueRange[0] < a) {
+            axis.valueRange[0] = a;
+            if (xScale == 1) {
+              axis.valueRange[1] = oldValueRange[1];
+            }
+          }
+          if (axis.valueRange[1] > b) {
+            axis.valueRange[1] = b;
+            if (xScale == 1) {
+              axis.valueRange[0] = oldValueRange[0];
+            }
+          }
+        }
         didZoom = true;
       }
     }
@@ -635,6 +695,14 @@ var distanceFromChart = function(event, g) {
       dy = distanceFromInterval(pt.y, box.top, box.bottom);
   return Math.max(dx, dy);
 };
+
+/**
+ * isOutOfExtremes checks that number p is out of extremes ex.
+ * ex is a tuple [a, b], with a <= b
+ */
+var isOutOfExtremes = function(p, ex) {
+  return p < ex[0] || p > ex[1];
+}
 
 /**
  * Default interation model for dygraphs. You can refer to specific elements of
