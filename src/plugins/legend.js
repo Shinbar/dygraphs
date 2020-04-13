@@ -105,6 +105,7 @@ Legend.prototype.select = function(e) {
   if (legendMode === 'follow') {
     // create floating legend div
     var area = e.dygraph.plotter_.area;
+    this.legend_div_.style.display = 'block';
     var labelsDivWidth = this.legend_div_.offsetWidth;
     var yAxisLabelWidth = e.dygraph.getOptionForAxis('axisLabelWidth', 'y');
     // determine floating [left, top] coordinates of the legend div
@@ -116,7 +117,7 @@ Legend.prototype.select = function(e) {
 
     // if legend floats to end of the chart area, it flips to the other
     // side of the selection point
-    if ((leftLegend + labelsDivWidth + 1) > area.w) {
+    if ((leftLegend + labelsDivWidth + 1 ) > area.w) {
       leftLegend = leftLegend - 2 * 50 - labelsDivWidth - (yAxisLabelWidth - area.x);
     }
 
