@@ -457,10 +457,10 @@ DygraphInteraction.startTouch = function(event, g, context) {
 
     var xExtremes = g.xAxisExtremes();
     var yExtremes = g.yAxisExtremes();
-    if (xExtremes[0] >= xExtremes[1] || this.isOutOfExtremes(context.initialPinchCenter.dataX, xExtremes)) {
+    if (xExtremes[0] >= xExtremes[1] || isOutOfExtremes(context.initialPinchCenter.dataX, xExtremes)) {
       context.pinchOutOfExtremes = true;
     }
-    if (yExtremes.find(yEx => yEx[0] >= yEx[1] || this.isOutOfExtremes(context.initialPinchCenter.dataY, yEx))) {
+    if (yExtremes.find(yEx => yEx[0] >= yEx[1] || isOutOfExtremes(context.initialPinchCenter.dataY, yEx))) {
       context.pinchOutOfExtremes = true;
     }
 
