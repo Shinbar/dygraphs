@@ -2606,11 +2606,11 @@ DygraphInteraction.startTouch = function (event, g, context) {
 
     var xExtremes = g.xAxisExtremes();
     var yExtremes = g.yAxisExtremes();
-    if (xExtremes[0] >= xExtremes[1] || this.isOutOfExtremes(context.pinchCenter.dataX, xExtremes)) {
+    if (xExtremes[0] >= xExtremes[1] || this.isOutOfExtremes(context.initialPinchCenter.dataX, xExtremes)) {
       context.pinchOutOfExtremes = true;
     }
     if (yExtremes.find(function (yEx) {
-      return yEx[0] >= yEx[1] || _this.isOutOfExtremes(pinchCenter.dataY, yEx);
+      return yEx[0] >= yEx[1] || _this.isOutOfExtremes(context.initialPinchCenter.dataY, yEx);
     })) {
       context.pinchOutOfExtremes = true;
     }
