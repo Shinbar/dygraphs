@@ -409,7 +409,11 @@ DygraphInteraction.endZoom = function(event, g, context) {
  * @private
  */
 DygraphInteraction.startTouch = function(event, g, context) {
-  event.preventDefault();  // touch browsers are all nice.
+  if (event.cancelable) {
+    // Check if the event is cancelable see :
+    // https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault
+    event.preventDefault();  // touch browsers are all nice.
+  }
   if (event.touches.length > 1) {
     // If the user ever puts two fingers down, it's not a double tap.
     context.startTimeForDoubleTapMs = null;

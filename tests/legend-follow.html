@@ -161,6 +161,15 @@ var candleData = "Date,Open,Close,High,Low\n" +
               labelsDiv: document.getElementById('legend'),
               legendFormatter: legendFormatter,
               legend: 'follow',
+              axes: {
+                
+                x: {
+                  ticker: function(min, max, pixels, opts, dygraph, vals) {
+                    // return Dygraph.getDateAxis(min, max, Dygraph.WEEKLY, opts, dygraph);
+                  },
+                },
+                
+              }
             });
     </script>
 </body>
