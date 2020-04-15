@@ -96,7 +96,7 @@ export var getContext = function(canvas) {
  * @private
  */
 export var addEvent = function addEvent(elem, type, fn) {
-  elem.addEventListener(type, fn, false);
+  elem.addEventListener(type, fn, {passive: false});
 };
 
 /**
@@ -107,7 +107,7 @@ export var addEvent = function addEvent(elem, type, fn) {
  *     on the event. The function takes one parameter: the event object.
  */
 export function removeEvent(elem, type, fn) {
-  elem.removeEventListener(type, fn, false);
+  elem.removeEventListener(type, fn, {passive: false});
 };
 
 /**

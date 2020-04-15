@@ -5189,7 +5189,7 @@ exports.getContext = getContext;
  * @private
  */
 var addEvent = function addEvent(elem, type, fn) {
-  elem.addEventListener(type, fn, false);
+  elem.addEventListener(type, fn, { passive: false });
 };
 
 exports.addEvent = addEvent;
@@ -5202,7 +5202,7 @@ exports.addEvent = addEvent;
  */
 
 function removeEvent(elem, type, fn) {
-  elem.removeEventListener(type, fn, false);
+  elem.removeEventListener(type, fn, { passive: false });
 }
 
 ;
